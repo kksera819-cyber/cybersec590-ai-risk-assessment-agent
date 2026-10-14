@@ -1,0 +1,76 @@
+{
+  "case": {
+    "case_id": "SMB-SIGNING-FILE04",
+    "threat": "SMB relay abuse when SMB signing is not required",
+    "asset_id": "FILE04",
+    "risk_question": "Does FILE04's nonmandatory SMB signing create a meaningful SMB relay risk in this environment?",
+    "source_mode": "simulated_environment_plus_external_reference",
+    "external_reference": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview"
+  },
+  "model": "gpt-6-luna",
+  "tool_trace": [
+    {
+      "step": 0,
+      "tool": "lookup_environment",
+      "arguments": "{\"asset_id\":\"FILE04\"}",
+      "result": {
+        "status": "ok",
+        "asset": {
+          "id": "FILE04",
+          "parent_cohort": "W05",
+          "role": "File server",
+          "os": "Windows Server 2022",
+          "smb_signing_required": false,
+          "smb1_enabled": false,
+          "network_reachability_for_relay": null,
+          "ntlm_relay_prerequisites_met": null,
+          "sensitive_share_access": null,
+          "evidence_ids": [
+            "S03",
+            "S02"
+          ]
+        },
+        "evidence": [
+          {
+            "id": "S02",
+            "fact": "Default-deny unlisted inter-zone traffic; no public SMB. This does not prove internal SMB is unreachable.",
+            "source_mode": "simulated",
+            "locator": "environment document pp.2,6"
+          },
+          {
+            "id": "S03",
+            "fact": "SMB signing not required on FILE04; SMB1 disabled on W05.",
+            "source_mode": "simulated",
+            "locator": "environment document pp.3,6"
+          }
+        ],
+        "context_evidence": [
+          {
+            "id": "S05",
+            "fact": "Collaboration and general files may suffer work interruption or confidential disclosure; RTO 24h, RPO 8h.",
+            "source_mode": "simulated",
+            "locator": "environment document p.6"
+          }
+        ],
+        "source_mode": "simulated",
+        "snapshot_date": "2026-09-23"
+      }
+    },
+    {
+      "step": 0,
+      "tool": "lookup_external_reference",
+      "arguments": "{\"url\":\"https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview\"}",
+      "result": {
+        "status": "ok",
+        "url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview",
+        "retrieval_url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview?accept=text/markdown",
+        "retrieved_at_utc": "2026-10-14T05:46:56.250631+00:00",
+        "source_mode": "live",
+        "content_type": "text/markdown; charset=utf-8",
+        "content_excerpt": "# Overview of Server Message Block signing in Windows | Microsoft Learn\n\nThis article describes Server Message Block (SMB) 2.x and 3.x signing in Windows and Windows Server. The article also describes SMB signing security considerations and policy settings.\r\n\r\nSMB signing means that every SMB message contains a signature generated using a session key and AES. SMB signing adds a signature containing a hash of the entire message in the SMB header. If someone tampers with the message in transit, the data in the tampered message doesn't match the hash in the signature. The hash also includes the identities of the original sender and the intended recipient. Signature mismatches alert users to possible foul play, helping them protect their deployments from relay and spoofing attacks.\r\n\r\n## How signing works\r\n\r\nSMB signing is a security feature that uses the session key and cipher suite to add a signature to a message going across a connection. SMB2 message integrity manifests on a signed session where signed packets flow from client to server. On a signed session, every signed packet includes a signature that the receiver can validate. Unlike SMB1 signing that uses the MD5 [RFC1321] hashing algorithm, SMB2 uses a better hashing for signing. The security model in MS-SMB2 relies upon authenticating the client-user identity before accessing a share on the server. After the user is authenticated, the server can mandate message signing or encryption. The server also controls access to the share based on which users, groups, or claims are authorized to have various levels of access.\r\n\r\nSigning algorithms have evolved over time, with SMB 2.02 signing was improved with HMAC-SHA-256, replacing the old MD5 method that was in SMB1. Additionally, SMB 3.0 introduced AES-CMAC. Windows Server 2022 and Windows 11 introduced AES-128-GMAC signing acceleration. To learn more about the AES-128-GMAC signing, see AES-128-GMAC signing acceleration.\r\n\r\nSMB signing is enabled in all versions of Windows. SMB signing requirements can involve both outbound signing, which covers traffic from the SMB client, and inbound signing, which covers traffic to the server. Windows and Windows Server can require outbound signing only, inbound signing only, both, or neither. If your environment uses non-Microsoft file servers, your system settings can prevent the default settings and connections from taking effect. In this case, you might need to disable the requirement for SMB signing. See Control SMB signing behavior for guidance on how to disable SMB signing.\r\n\r\n### Security considerations in SMB2 and SMB3\r\n\r\nAll cryptographic keys used in SMB 2.x and 3.x signing are derived from the session key. The security of SMB 2/3 signing and encryption relies on the session key. If someone changes a message during transmission, the hash doesn't match, and SMB knows that someone tampered with the data. The signature also confirms the sender's and receiver's identities, and prevents relay attacks.\r\n\r\nWhen using SMB signing, you should consider:\r\n\r\n- Because the session key itself is derived from your password, using a long, complex, nondictionary password enhances SMB signing and encryption.\r\n- Using Kerberos instead of NTLMv2 is recommended so that your session key starts strong.\r\n- Don't connect to shares by using IP addresses or CNAME records, otherwise NTLM is used instead of Kerberos. We recommend using Kerberos. To learn more about alternatives to using CNAME records, see Using Computer Name Aliases in place of DNS CNAME Records.\r\n\r\nBy default, domain controllers require SMB signing of anyone connecting to them, typically for SYSVOL and NETLOGON to get group policy and logon scripts. UNC Hardening from the client also requires signing when talking to those same two shares and goes further by requiring Kerberos. SMB signing is also automatically used as part of pre-authentication integrity to prevent downgrade attacks. For more information, see SMB 3.1.1 Pre-authentication integrity in Windows 10.\r\n\r\n## Policy locations for SMB signing\r\n\r\nThe policies for SMB signing are located in **Computer Configuration** &gt; **Windows Settings** &gt; **Security Settings** &gt; **Local Policies** &gt; **Security Options**.\r\n\r\n- **Microsoft network client: Digitally sign communications (always)** Registry key: `HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Services\\LanManWorkstation\\Parameters` Registry value: **RequireSecuritySignature** Data Type: `REG_DWORD` Data: 0 (disable), 1 (enable)\r\n- **Microsoft network server: Digitally sign communications (always)** Registry key: `HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Services\\LanManServer\\Parameters` Registry value: **RequireSecuritySignature** Data Type: `REG_DWORD` Data: 0 (disable), 1 (enable)\r\n\r\nNote\r\n\r\nIn these policies *always* indicates that SMB signing is required.\r\n\r\n### Understanding \"RequireSecuritySignature\" and \"EnableSecuritySignature\"\r\n\r\nThe **EnableSecuritySignature** registry setting for SMB2 and later clients and servers is ignored. Therefore, this setting does nothing unless you're using SMB1. SMB 2.02 and later signing is controlled solely by being required or not. This setting is used when either the server or client requires SMB signing. Signing doesn't occur only when both the server and client have signing set to **0**.\r\n\r\nIn summary SMB is signed when:\r\n\r\n- Both the SMB client and server have **RequireSecuritySignature** set to **1**.\r\n- The SMB client has **RequireSecuritySignature** set to **1** and the server has **RequireSecuritySignature** set to **0**.\r\n- The SMB server has **RequireSecuritySignature** set to **1** and the client has **RequireSecuritySignature** set to **0**.\r\n\r\nSigning isn't used when:\r\n\r\n- The SMB client and server have **RequireSecuritySignature** set to **0**.\r\n\r\n## SMB signing and encryption auditing\r\n\r\nStarting with Windows 11, version 24H2, administrators can enable auditing for the SMB client to detect third-party clients or servers that don't support SMB encryption or signing. If a third-party device or software claims to support SMB 3.1.1, but doesn't support SMB signing, it violates the SMB 3.1.1 pre-authentication integrity protocol requirement.\r\n\r\nAdjusting the SMB signing and encryption auditing settings can be modified in Group Policy or through PowerShell. These settings for Group Policy are stored in the paths:\r\n\r\n- `Computer Configuration\\Administrative Templates\\Network\\Lanman Server\\Audit client does not support encryption`\r\n- `Computer Configuration\\Administrative Templates\\Network\\Lanman Server\\Audit client does not support signing`\r\n- `Computer Configuration\\Administrative Templates\\Network\\Lanman Workstation\\Audit server does not support encryption`\r\n- `Computer Configuration\\Administrative Templates\\Network\\Lanman Workstation\\Audit server does not support signing`\r\n\r\nFor PowerShell, running the following commands enables auditing the same settings:\r\n\r\n```powershell\r\nSet-SmbServerConfiguration -AuditClientDoesNotSupportEncryption $true\r\nSet-SmbServerConfiguration -AuditClientDoesNotSupportSigning $true\r\n\r\nSet-SmbClientConfiguration -AuditServerDoesNotSupportEncryption $true\r\nSet-SmbClientConfiguration -AuditServerDoesNotSupportSigning $true\r\n```\r\n\r\nThe Event Viewer captures these events under the following paths with their respective Event IDs:\r\n\r\n| Path | Event ID |\r\n| --- | --- |\r\n| Applications and Services Logs\\Microsoft\\Windows\\SMBClient\\Audit | 31998  31999 |\r\n| Applications and Services Logs\\Microsoft\\Windows\\SMBServer\\Audit | 3021  3022 |",
+        "note": "Retrieved reference content; verify relevance to FILE04."
+      }
+    }
+  ],
+  "raw_model_final": "{\n  \"applicability\": \"potential\",\n  \"impact\": \"unknown\",\n  \"rationale\": \"Verified: FILE04 is a Windows Server 2022 file server; SMB signing is not required and SMB1 is disabled. Microsoft’s reference explains that SMB signing helps prevent relay attacks, but SMB2/3 signing is not used only when both client and server do not require it. Therefore, FILE04’s setting alone does not establish that a relay path or unsigned session exists. The environment evidence says unlisted inter-zone traffic is default-deny and public SMB is not exposed, but does not establish internal SMB reachability. Relay prerequisites and sensitive-share access are also unverified. S05 describes possible impact to collaboration and general files, but does not establish FILE04’s share classification or business impact.\",\n  \"unknowns\": [\n    \"Whether an attacker-controlled or coerced authentication flow can reach FILE04 over SMB from a relevant network segment.\",\n    \"Whether NTLM relay prerequisites are met and whether the client, server, or other controls require signing for relevant sessions.\",\n    \"Which shares and permissions FILE04 exposes, whether they contain sensitive data, and the resulting business impact.\",\n    \"Whether additional controls, such as SMB encryption, Kerberos enforcement, or network segmentation, mitigate the scenario.\"\n  ],\n  \"recommended_action\": \"Verify SMB signing behavior on FILE04 and representative clients, including whether relevant sessions can be unsigned; investigate internal SMB reachability and NTLM relay prerequisites. Require signing where compatible, and review share access and authentication controls. Do not treat the current setting alone as proof of an exploitable relay path.\",\n  \"evidence_to_resolve\": [\n    \"S02: Default-deny unlisted inter-zone traffic and no public SMB; internal SMB reachability remains unproven.\",\n    \"S03: SMB signing is not required on FILE04; SMB1 is disabled on W05.\",\n    \"Microsoft Learn SMB signing overview: signing helps prevent relay attacks, and SMB2/3 signing is unused only when both endpoints do not require it.\",\n    \"Obtain FILE04-specific network-flow or firewall evidence, SMB client/server signing configuration and session telemetry, NTLM relay-prerequisite assessment, and share inventory/classification with access permissions.\"\n  ]\n}"
+}

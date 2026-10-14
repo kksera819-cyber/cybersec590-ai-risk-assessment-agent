@@ -1,0 +1,12 @@
+{
+  "proposed_model_analysis": {
+    "applicability": "confirmed",
+    "impact": "low"
+  },
+  "simulated_tool_conditions": {
+    "reachability": true,
+    "prerequisites": true,
+    "sensitive": false
+  },
+  "expected_decision": "Medium"
+}

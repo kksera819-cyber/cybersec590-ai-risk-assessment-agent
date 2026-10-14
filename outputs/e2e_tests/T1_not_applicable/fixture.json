@@ -1,0 +1,12 @@
+{
+  "proposed_model_analysis": {
+    "applicability": "not_applicable",
+    "impact": "high"
+  },
+  "simulated_tool_conditions": {
+    "reachability": false,
+    "prerequisites": false,
+    "sensitive": true
+  },
+  "expected_decision": "Low"
+}

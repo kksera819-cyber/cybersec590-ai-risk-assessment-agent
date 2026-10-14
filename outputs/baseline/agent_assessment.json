@@ -1,0 +1,60 @@
+{
+  "case_id": "SMB-SIGNING-FILE04",
+  "asset_id": "FILE04",
+  "threat": "SMB relay abuse when SMB signing is not required",
+  "decision": "Insufficient Evidence",
+  "policy_rule": "P1: decisive evidence missing",
+  "applicability": "potential",
+  "impact": "unknown",
+  "rationale": "Verified: FILE04 is a Windows Server 2022 file server; SMB signing is not required and SMB1 is disabled. Microsoft’s reference explains that SMB signing helps prevent relay attacks, but SMB2/3 signing is not used only when both client and server do not require it. Therefore, FILE04’s setting alone does not establish that a relay path or unsigned session exists. The environment evidence says unlisted inter-zone traffic is default-deny and public SMB is not exposed, but does not establish internal SMB reachability. Relay prerequisites and sensitive-share access are also unverified. S05 describes possible impact to collaboration and general files, but does not establish FILE04’s share classification or business impact.",
+  "evidence": [
+    {
+      "id": "S02",
+      "fact": "Default-deny unlisted inter-zone traffic; no public SMB. This does not prove internal SMB is unreachable.",
+      "source_mode": "simulated",
+      "locator": "environment document pp.2,6"
+    },
+    {
+      "id": "S03",
+      "fact": "SMB signing not required on FILE04; SMB1 disabled on W05.",
+      "source_mode": "simulated",
+      "locator": "environment document pp.3,6"
+    }
+  ],
+  "context_evidence": [
+    {
+      "id": "S05",
+      "fact": "Collaboration and general files may suffer work interruption or confidential disclosure; RTO 24h, RPO 8h.",
+      "source_mode": "simulated",
+      "locator": "environment document p.6"
+    }
+  ],
+  "external_reference": {
+    "url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview",
+    "status": "ok",
+    "source_mode": "live",
+    "retrieved_at_utc": "2026-10-14T05:46:56.250631+00:00"
+  },
+  "unknowns": [
+    "Whether an attacker-controlled or coerced authentication flow can reach FILE04 over SMB from a relevant network segment.",
+    "Whether NTLM relay prerequisites are met and whether the client, server, or other controls require signing for relevant sessions.",
+    "Which shares and permissions FILE04 exposes, whether they contain sensitive data, and the resulting business impact.",
+    "Whether additional controls, such as SMB encryption, Kerberos enforcement, or network segmentation, mitigate the scenario."
+  ],
+  "recommended_action": "Verify SMB signing behavior on FILE04 and representative clients, including whether relevant sessions can be unsigned; investigate internal SMB reachability and NTLM relay prerequisites. Require signing where compatible, and review share access and authentication controls. Do not treat the current setting alone as proof of an exploitable relay path.",
+  "evidence_to_resolve": [
+    "S02: Default-deny unlisted inter-zone traffic and no public SMB; internal SMB reachability remains unproven.",
+    "S03: SMB signing is not required on FILE04; SMB1 is disabled on W05.",
+    "Microsoft Learn SMB signing overview: signing helps prevent relay attacks, and SMB2/3 signing is unused only when both endpoints do not require it.",
+    "Obtain FILE04-specific network-flow or firewall evidence, SMB client/server signing configuration and session telemetry, NTLM relay-prerequisite assessment, and share inventory/classification with access permissions."
+  ],
+  "review_status": "pending_human_review",
+  "created_at_utc": "2026-10-14T05:47:03.989863+00:00",
+  "model": "gpt-6-luna",
+  "implementation_status": "llm_tool_calling",
+  "tool_checks": {
+    "environment_called": true,
+    "external_called": true,
+    "external_succeeded": true
+  }
+}

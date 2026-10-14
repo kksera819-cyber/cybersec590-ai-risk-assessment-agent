@@ -1,0 +1,34 @@
+{
+  "case": {
+    "case_id": "SMB-SIGNING-FILE04",
+    "threat": "SMB relay abuse when SMB signing is not required",
+    "asset_id": "FILE04",
+    "risk_question": "Does FILE04's nonmandatory SMB signing create a meaningful SMB relay risk in this environment?",
+    "source_mode": "simulated_environment_plus_external_reference",
+    "external_reference": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview"
+  },
+  "model": "mock-model-for-e2e",
+  "tool_trace": [
+    {
+      "step": 0,
+      "tool": "lookup_environment",
+      "arguments": "{\"asset_id\": \"FILE04\"}",
+      "result": {
+        "status": "unavailable",
+        "source_mode": "simulated_test"
+      }
+    },
+    {
+      "step": 0,
+      "tool": "lookup_external_reference",
+      "arguments": "{\"url\": \"https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview\"}",
+      "result": {
+        "status": "ok",
+        "url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview",
+        "source_mode": "simulated_test",
+        "content_excerpt": "SMB signing protects message integrity."
+      }
+    }
+  ],
+  "raw_model_final": "{\"applicability\": \"confirmed\", \"impact\": \"high\", \"rationale\": \"Controlled synthetic fixture; not an observed production risk.\", \"unknowns\": [], \"recommended_action\": \"Review the simulated configuration.\", \"evidence_to_resolve\": []}"
+}

@@ -1,0 +1,10 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+# Keep baseline and test evidence when submitting; inspect for secrets before committing.

@@ -1,0 +1,44 @@
+[
+  {
+    "scenario": "T1_confirmed",
+    "expected": "High",
+    "actual": "High",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  },
+  {
+    "scenario": "T1_not_applicable",
+    "expected": "Low",
+    "actual": "Low",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  },
+  {
+    "scenario": "T2_high_impact",
+    "expected": "High",
+    "actual": "High",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  },
+  {
+    "scenario": "T2_low_impact",
+    "expected": "Medium",
+    "actual": "Medium",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  },
+  {
+    "scenario": "T3_missing_evidence",
+    "expected": "Insufficient Evidence",
+    "actual": "Insufficient Evidence",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  },
+  {
+    "scenario": "T4_external_failure",
+    "expected": "Insufficient Evidence",
+    "actual": "Insufficient Evidence",
+    "pass": true,
+    "mode": "mock_model_and_simulated_tools"
+  }
+]

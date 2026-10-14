@@ -1,0 +1,14 @@
+flowchart TD
+    A[Case input: FILE04 and risk question] --> B[LLM agent via Duke AI Gateway]
+    B -->|Model-selected tool call| C[Environment lookup]
+    B -->|Model-selected tool call| D[External reference lookup]
+    C --> E[Simulated asset and S02 S03 S05 evidence]
+    D --> F[Allowlisted Microsoft Learn technical content]
+    E --> G[Tool results with provenance and unknowns]
+    F --> G
+    G --> B
+    B --> H[Structured applicability and impact analysis]
+    H --> I[Python validation and deterministic risk policy]
+    I --> J[Assessment JSON and tool trace]
+    J --> K[Human evidence review]
+    K --> L[Follow-up verification and mitigation]

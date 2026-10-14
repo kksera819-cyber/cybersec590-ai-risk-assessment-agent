@@ -1,0 +1,17 @@
+{
+  "organization": "Northbridge Services",
+  "source_mode": "simulated",
+  "source_document": "Windows_Enterprise_Environment.docx",
+  "snapshot_date": "2026-09-23",
+  "assets": [
+    {"id": "W05", "role": "File servers", "count": 4, "os": "Windows Server 2022", "smb1_enabled": false, "smb_signing_required_hosts": 3, "evidence_ids": ["S01", "S03"]},
+    {"id": "FILE04", "parent_cohort": "W05", "role": "File server", "os": "Windows Server 2022", "smb_signing_required": false, "smb1_enabled": false, "network_reachability_for_relay": null, "ntlm_relay_prerequisites_met": null, "sensitive_share_access": null, "evidence_ids": ["S03", "S02"]}
+  ],
+  "evidence": [
+    {"id": "S01", "fact": "Asset register includes 60 server VMs and four W05 file servers.", "source_mode": "simulated", "locator": "environment document pp.1,3,6"},
+    {"id": "S02", "fact": "Default-deny unlisted inter-zone traffic; no public SMB. This does not prove internal SMB is unreachable.", "source_mode": "simulated", "locator": "environment document pp.2,6"},
+    {"id": "S03", "fact": "SMB signing not required on FILE04; SMB1 disabled on W05.", "source_mode": "simulated", "locator": "environment document pp.3,6"},
+    {"id": "S05", "fact": "Collaboration and general files may suffer work interruption or confidential disclosure; RTO 24h, RPO 8h.", "source_mode": "simulated", "locator": "environment document p.6"}
+  ],
+  "unknowns": ["Exact FILE04 network access paths", "NTLM relay prerequisites", "FILE04 share data classification", "Effective SMB signing negotiation and other controls"]
+}

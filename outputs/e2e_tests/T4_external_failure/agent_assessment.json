@@ -1,0 +1,35 @@
+{
+  "case_id": "SMB-SIGNING-FILE04",
+  "asset_id": "FILE04",
+  "threat": "SMB relay abuse when SMB signing is not required",
+  "decision": "Insufficient Evidence",
+  "policy_rule": "P1: decisive evidence missing",
+  "applicability": "unknown",
+  "impact": "high",
+  "rationale": "Controlled synthetic fixture; not an observed production risk.",
+  "evidence": [
+    {
+      "id": "TEST",
+      "fact": "Synthetic evidence for controlled test",
+      "source_mode": "simulated_test"
+    }
+  ],
+  "context_evidence": [],
+  "external_reference": {
+    "url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-signing-overview",
+    "status": "unavailable",
+    "source_mode": "simulated_failure"
+  },
+  "unknowns": [],
+  "recommended_action": "Review the simulated configuration.",
+  "evidence_to_resolve": [],
+  "review_status": "pending_human_review",
+  "created_at_utc": "2026-10-14T15:52:50.453032+00:00",
+  "model": "mock-model-for-e2e",
+  "implementation_status": "llm_tool_calling",
+  "tool_checks": {
+    "environment_called": true,
+    "external_called": true,
+    "external_succeeded": false
+  }
+}

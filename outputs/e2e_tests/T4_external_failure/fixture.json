@@ -1,0 +1,13 @@
+{
+  "proposed_model_analysis": {
+    "applicability": "confirmed",
+    "impact": "high"
+  },
+  "simulated_tool_conditions": {
+    "reachability": true,
+    "prerequisites": true,
+    "sensitive": true,
+    "external_failure": true
+  },
+  "expected_decision": "Insufficient Evidence"
+}
