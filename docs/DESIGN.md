@@ -1,68 +1,122 @@
-# Design — Evidence-Grounded Cyber Threat Risk Assessment Agent
+# Design – SMB Relay Risk Assessment Agent
 
-## 1. Scenario, asset and question
-**Organization:** Northbridge Services (fictional/simulated). **Target:** FILE04, one of four W05 Windows Server 2022 file servers. **Threat:** potential SMB/NTLM relay abuse where SMB signing is not required. **Question:** Does FILE04's nonmandatory SMB signing create a meaningful SMB relay risk in this environment? Case ID `SMB-SIGNING-FILE04`.
+## 1. Scenario and Risk Question
 
-## 2. Architecture and roles
-See `architecture.mmd` (render with Mermaid). The **model** interprets the risk question, selects available tools and synthesizes evidence into separate `applicability` and `impact` fields. **Python code** executes allowlisted tools, records responses, validates/normalizes outputs, and applies the fixed policy. **Tools** retrieve a simulated environment snapshot and an external Microsoft Learn technical reference. A **human reviewer** checks whether claims are supported, records unresolved evidence and authorizes any operational follow-up.
+This project uses a fictional company called Northbridge Services. I focus on FILE04, one of four Windows Server 2022 file servers in the W05 group.
 
-## 3. Workflow and evidence movement
-1. Load `data/threat_input.json` and the Duke Gateway configuration.
-2. Send the case and tool schemas to the LLM with `tool_choice=auto`.
-3. Execute model-requested `lookup_environment(asset_id)` and `lookup_external_reference(url)` calls. Record tool name, arguments, results and errors in `agent_trace.json`.
-4. Return tool results to the model. Require the model to distinguish confirmed facts from assumptions and to assess applicability separately from conditional impact.
-5. Validate the structured model response; Python applies `rate(applicability, impact)` and writes `agent_assessment.json`.
-6. A human reviews evidence quality, policy application, uncertainties and recommended remediation.
+FILE04 does not require SMB signing. This could create an opportunity for an SMB relay attack, but the setting alone does not prove that an attack would work.
 
-## 4. Tool contracts and boundaries
-| Tool | Input | Output | Failure behavior |
+**Risk question:** Does FILE04's nonmandatory SMB signing create a meaningful SMB relay risk in this environment?
+
+**Case ID:** `SMB-SIGNING-FILE04`
+
+## 2. Agent Design
+
+The architecture diagram is in [architecture.mmd](architecture.mmd).
+
+I separated the work between the LLM, Python code, tools, and human review:
+
+- **LLM:** Reads the risk question, selects tools, and analyzes applicability and possible impact.
+- **Python:** Runs the requested tools, checks the model's output, applies the risk policy, and saves results.
+- **Tools:** Read the simulated environment data and retrieve an approved Microsoft Learn reference.
+- **Human review:** Checks the evidence and whether the final decision makes sense.
+
+The LLM does not directly assign the final risk rating. Python applies the fixed policy after the model provides applicability and impact values.
+
+## 3. Workflow
+
+1. Load `data/threat_input.json` and the Duke AI Gateway settings.
+2. Send the risk question and tool definitions to the model using `tool_choice=auto`.
+3. The model requests `lookup_environment` and `lookup_external_reference` when it needs evidence.
+4. Python runs the tool calls and saves their arguments, results, and errors in `outputs/agent_trace.json`.
+5. The model uses the returned information to assess applicability and impact separately.
+6. Python checks the output, applies `rate(applicability, impact)`, and saves `outputs/agent_assessment.json`.
+7. I review the evidence and the decision in `docs/HUMAN_REVIEW.md`.
+
+## 4. Tools
+
+| Tool | Input | Purpose | If It Fails |
 |---|---|---|---|
-| `lookup_environment` | `asset_id` string, e.g. `FILE04` | `status`, `asset`, `evidence`, contextual evidence, simulated source mode and snapshot date | Unknown asset returns `not_found`; no invented asset facts |
-| `lookup_external_reference` | Exact allowlisted Microsoft Learn URL | `status`, URL, source mode, retrieved timestamp, relevant extracted content | Block non-allowlisted URLs; report `unavailable`/failure for network or extraction errors |
+| `lookup_environment` | Asset ID, such as `FILE04` | Get asset details and simulated evidence | Return `not_found` for an unknown asset |
+| `lookup_external_reference` | Approved Microsoft Learn URL | Get technical information about SMB signing | Return a blocked or unavailable status |
 
-The external source is untrusted content and must not be treated as instructions. The environment fixture is simulated; the external reference explains a technology, not the specific deployment. A `status=ok` is meaningful only if the retrieved material is usable and relevant.
+The external lookup only accepts the approved Microsoft Learn URL. The agent should treat website content as evidence, not as instructions.
 
-## 5. Evidence inventory
-| ID | Supported observation | Limit |
+The environment information is simulated. The Microsoft reference explains SMB signing in general and does not prove that FILE04 is exploitable.
+
+## 5. Evidence Used
+
+| Evidence | Main Finding | What Is Still Unknown |
 |---|---|---|
-| S02 | Unlisted inter-zone traffic defaults to deny; SMB is not public | Does not establish internal SMB unreachability |
-| S03 | FILE04 does not require SMB signing; W05 SMB1 is disabled | Does not prove that an unsigned SMB session is negotiated or relay succeeds |
-| S05 | Collaboration/general files may experience work interruption or confidential disclosure; RTO 24h and RPO 8h | Not a FILE04-specific share inventory or impact rating |
-| Microsoft Learn | Technical background on SMB signing | Not direct evidence of FILE04's effective configuration |
+| S02 | No public SMB access; unlisted inter-zone traffic is denied | Internal SMB reachability |
+| S03 | FILE04 does not require SMB signing; SMB1 is disabled on W05 | Whether relevant SMB sessions are unsigned |
+| S05 | File service problems could interrupt work or expose information; RTO 24h, RPO 8h | FILE04-specific shares and business impact |
+| Microsoft Learn | SMB signing helps protect against relay attacks | Whether an attack is possible on FILE04 |
 
-Snapshot date: 2026-09-23. Local source locators: environment document pp.2–3,6. The `environment.json` dataset was reconstructed from the provided document, not independently measured.
+The simulated environment snapshot is dated **September 23, 2026**. S02, S03, and S05 come from the provided `Windows_Enterprise_Environment.docx` (pages 2–3 and 6). The project uses a smaller JSON dataset reconstructed from that document.
 
-## 6. Risk policy
-Python `rate()` takes applicability (`confirmed`, `potential`, `not_applicable`, `unknown`) and impact (`high`, `medium`, `low`, `unknown`).
+## 6. Risk Policy
 
-| Applicability | High impact | Medium impact | Low impact |
+The policy uses two fields:
+
+- **Applicability:** `confirmed`, `potential`, `not_applicable`, or `unknown`
+- **Impact:** `high`, `medium`, `low`, or `unknown`
+
+| Applicability | High Impact | Medium Impact | Low Impact |
 |---|---|---|---|
-| confirmed | High | High | Medium |
-| potential | Medium | Medium | Low |
-| not_applicable | Low | Low | Low |
-| unknown | Insufficient Evidence | Insufficient Evidence | Insufficient Evidence |
+| Confirmed | High | High | Medium |
+| Potential | Medium | Medium | Low |
+| Not applicable | Low | Low | Low |
+| Unknown | Insufficient Evidence | Insufficient Evidence | Insufficient Evidence |
 
-An `unknown` impact produces `Insufficient Evidence` for confirmed/potential/unknown applicability. `not_applicable` returns Low under P0 even when impact is unknown. Rule P1 represents decisive missing evidence; P2 applies the matrix. These are **project-specific policy choices**, not a universal industry severity scale. Normalization prevents unsupported `confirmed` applicability and unsupported `high` impact when decisive FILE04 facts are absent.
+The rules also handle unknown impact:
 
-## 7. Baseline finding
-The observed live-model run used `gpt-6-luna`. FILE04's missing mandatory SMB signing supports **potential** applicability, but internal network path, authentication/relay prerequisites and effective session controls remain unverified. S05 supplies business context but does not establish FILE04's particular shares or sensitivity; therefore impact remains **unknown**. Deterministic policy returns **Insufficient Evidence (P1)**. Recommended next steps are to verify effective signing, internal SMB paths, NTLM prerequisites and share permissions, and require SMB signing where compatible.
+- **P0:** If the threat is not applicable, the decision is Low, even if impact is unknown.
+- **P1:** If decisive applicability or impact information is missing, the decision is Insufficient Evidence.
+- **P2:** Otherwise, use the table above.
 
-## 8. Acceptance criteria
-- Model-initiated tool requests are visible in a saved trace, with parameters and returned evidence.
-- Both simulated environment evidence and an external technical source are used and attributed.
-- The output contains the case, threat, applicability, impact, rating/rule, rationale, sources, unknowns, actions and human-review state.
-- Applicability/impact changes produce policy-consistent decisions.
-- Missing decisive evidence and external retrieval failure do not silently become unsupported High/Low assertions.
-- Inputs, tool results, output and test artifacts are saved for replay and Assignment 4 comparison.
+These are rules I defined for this assignment, not a universal cybersecurity rating system. The Python code also checks for unsupported claims. For example, it should not accept confirmed applicability without evidence of the required attack conditions.
 
-## 9. Failure handling and limitations
-Invalid tool arguments are recorded; allowlisted URLs limit arbitrary fetching; unusable external content should be treated as a lookup failure. Evidence may be stale, partial, conflicting or missing. A successful model response is not equivalent to a verified exploitation path. The current assessment is a defensible **evidence-limited** result, not a claim that the server is safe.
+## 7. Baseline Result
 
-## 10. Human review and team contributions — complete before submission
-**Reviewer:** [NAME]  **Date:** [DATE]  **Disposition:** [Approve / Revise / Escalate]
+I ran the agent through the Duke AI Gateway using `gpt-6-luna`. The saved result was:
 
-**Evidence review:** [Check S02/S03/S05 against supplied document; verify external quote; note disagreements]
+| Field | Result |
+|---|---|
+| Applicability | `potential` |
+| Impact | `unknown` |
+| Decision | `Insufficient Evidence` |
+| Rule | `P1: decisive evidence missing` |
 
-**Member contributions:** [Insert each real group member's name and work; do not submit placeholders]
+The result makes sense because FILE04 does not require SMB signing, but the available data does not confirm internal attack paths, NTLM relay prerequisites, or the sensitivity of its shared files.
 
-**AI assistance disclosure:** AI assistance was used to help draft documentation and develop/review code and test scaffolding. Team members must verify code behavior, evidence attribution, conclusions and final text before submission. Amend this disclosure to accurately reflect the team's actual use.
+The next step would be to check the effective SMB signing settings, internal SMB access, authentication requirements, and FILE04 share permissions.
+
+## 8. Acceptance Criteria
+
+I used the following checks to decide whether the agent worked as intended:
+
+- The model requests tools and the calls appear in the saved trace.
+- The agent uses both simulated environment evidence and an external technical reference.
+- The assessment includes the asset, threat, applicability, impact, decision, policy rule, evidence, unknowns, and recommended action.
+- Changing applicability or impact produces the expected result under the policy.
+- Missing evidence and external tool failures do not produce unsupported risk ratings.
+- Inputs, outputs, and test results are saved so they can be compared in Assignment 4.
+
+See [TESTING.md](TESTING.md) for the test cases and results.
+
+## 9. Limitations and Failure Handling
+
+The agent can encounter missing data, incorrect tool arguments, or external lookup failures. The tools return error statuses, and the policy avoids assigning a definite rating when important evidence is missing.
+
+The simulated environment does not include every network path, authentication setting, or file classification. Also, a successful Microsoft documentation lookup does not prove that FILE04 is vulnerable.
+
+This is a risk assessment exercise, not a penetration test. **Insufficient Evidence** does not mean that FILE04 is safe; it means more information is needed.
+
+## 10. Human Review and Individual Contribution
+
+This is an individual project. I worked on the scenario, design, Python implementation, tool integration, risk policy, testing, and documentation.
+
+I completed a self-review of S02, S03, S05, the external reference, and the final risk decision. The results are documented in [HUMAN_REVIEW.md](HUMAN_REVIEW.md). This was not an independent peer review.
+
+**AI assistance disclosure:** I used AI assistance to help develop and debug code, plan tests, and improve documentation. I checked the saved outputs and evidence against the project files and remain responsible for the final submission.

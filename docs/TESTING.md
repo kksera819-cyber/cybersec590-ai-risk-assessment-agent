@@ -1,39 +1,86 @@
 # Testing Report — Assignment 2
 
-## Test strategy
-We use three levels of evidence: (1) deterministic policy/tool unit tests, (2) deterministic **mock LLM + simulated tool** end-to-end orchestration scenarios, and (3) a separate **live Duke AI Gateway baseline**. Mocked scenarios exercise the orchestration pipeline but do not demonstrate live model generalization. The expected outputs below are policy-derived and were specified before comparing the observed outcomes.
+## 1. How I Tested the Agent
 
-## Unit tests
-User-observed terminal result: **11/11 passed** using `python -m unittest discover -s tests -v`. The test suite covers policy transitions, environment lookup, invalid tool request, missing evidence, external failure and rejection of unusable HTML. Preserve `outputs/unit_test_results_final.txt` as the execution log.
+I used three types of tests to check my risk assessment agent:
 
-## End-to-end mocked orchestration tests
-Source: `outputs/e2e_tests/report.md` and the user's terminal output. **6/6 passed**.
+1. **Unit tests:** Check the Python risk policy and tool behavior.
+2. **Mock end-to-end (E2E) tests:** Check how the agent handles different scenarios using simulated model and tool responses.
+3. **Live Duke AI Gateway run:** Check that the agent can call tools and produce an assessment with a real model.
 
-| Scenario | Controlled condition | Expected | Actual | Result |
+I compared the expected results with the actual outputs. The expected decisions were based on the risk policy described in [DESIGN.md](DESIGN.md).
+
+## 2. Unit Tests
+
+I ran the following command from the project folder:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+**Result: 11 out of 11 tests passed.**
+
+These tests cover risk policy decisions, environment lookup, invalid tool requests, missing evidence, external lookup failures, and unusable external content.
+
+The saved baseline test log is in `outputs/baseline/unit_test_results.txt`.
+
+## 3. Mock End-to-End Tests
+
+I also tested six scenarios with mocked LLM and tool responses. This let me change specific conditions and check whether the agent followed the policy without depending on live model responses.
+
+**Result: 6 out of 6 scenarios passed.**
+
+| Scenario | Test Condition | Expected | Actual | Result |
 |---|---|---|---|---|
-| T1_confirmed | Confirmed applicability, high impact | High | High | PASS |
-| T1_not_applicable | Non-applicability with high impact held constant | Low | Low | PASS |
-| T2_high_impact | Confirmed applicability and high impact | High | High | PASS |
-| T2_low_impact | Confirmed applicability and low impact | Medium | Medium | PASS |
-| T3_missing_evidence | Missing decisive prerequisite evidence | Insufficient Evidence | Insufficient Evidence | PASS |
-| T4_external_failure | External reference tool returns failure | Insufficient Evidence | Insufficient Evidence | PASS |
+| T1_confirmed | Confirmed applicability, high impact | High | High | Pass |
+| T1_not_applicable | Not applicable, high impact | Low | Low | Pass |
+| T2_high_impact | Confirmed applicability, high impact | High | High | Pass |
+| T2_low_impact | Confirmed applicability, low impact | Medium | Medium | Pass |
+| T3_missing_evidence | Important evidence is missing | Insufficient Evidence | Insufficient Evidence | Pass |
+| T4_external_failure | External lookup fails | Insufficient Evidence | Insufficient Evidence | Pass |
 
-The exact fixtures are saved under `outputs/e2e_tests/<scenario>/fixture.json`. Each scenario also saves `agent_assessment.json` and `agent_trace.json`. Review fixtures before asserting which individual prerequisites were altered.
+The T1 scenarios check how changing applicability affects the decision. The T2 scenarios check how changing impact affects the decision. T3 checks missing evidence, and T4 checks a controlled tool failure.
 
-## Live model baseline
-The live Duke Gateway baseline (`gpt-6-luna`) returned `applicability=potential`, `impact=unknown`, `decision=Insufficient Evidence`, rule `P1`. Tool trace recorded `lookup_environment` and `lookup_external_reference`. Source S02/S03 and contextual S05 were used. This is **one observed run**, not a statistical accuracy evaluation. Files: `outputs/baseline/agent_assessment.json` and `outputs/baseline/agent_trace.json`.
+The scenario files are saved under `outputs/e2e_tests/`. Each scenario includes its input fixture, assessment, and trace. The overall results are saved in `outputs/e2e_tests/report.md` and `outputs/e2e_tests/report.json`.
 
-## Human evidence review — required before final submission
-| Check | Reviewer observation | Status |
-|---|---|---|
-| S03 actually supports FILE04 signing exception | [VERIFY AGAINST SOURCE] | Pending |
-| S02 does not imply internal SMB is unreachable | [VERIFY] | Pending |
-| S05 is contextual, not FILE04-specific | [VERIFY] | Pending |
-| Microsoft reference is accurately paraphrased and dated | [VERIFY] | Pending |
-| Missing evidence is explicit and action items are safe | [VERIFY] | Pending |
-| T1–T4 traces match expected tool outputs and decisions | [VERIFY] | Pending |
+**Important:** These six tests use mocked responses. They are not six separate live Duke AI Gateway runs.
 
-**Reviewer name/date:** [COMPLETE]  **Review outcome:** [COMPLETE]  **Corrections made:** [COMPLETE]
+## 4. Live Agent Run
 
-## Limitations and follow-up
-The dataset is simulated and reconstructed from a course document. No live host scanning, NTLM authentication telemetry, SMB negotiation capture, or share ACL inspection was performed. The six scenario evaluations used mocked LLM/tool responses. Future validation should test multiple genuine model runs and obtain authorized network/configuration evidence before assigning an operational risk rating.
+I ran the agent using the Duke AI Gateway with the `gpt-6-luna` model.
+
+The saved trace shows calls to both `lookup_environment` and `lookup_external_reference`. The agent used simulated environment evidence and a live Microsoft technical reference.
+
+The final output was:
+
+| Field | Result |
+|---|---|
+| Applicability | potential |
+| Impact | unknown |
+| Decision | Insufficient Evidence |
+| Policy rule | P1: decisive evidence missing |
+
+I think this result makes sense because FILE04 does not require SMB signing, but the available evidence does not confirm internal reachability, relay prerequisites, or the impact on FILE04's files.
+
+The saved live run is available in:
+
+- `outputs/baseline/agent_assessment.json`
+- `outputs/baseline/agent_trace.json`
+
+This is one successful live run, so it does not show how consistently the model would perform across many runs.
+
+## 5. Human Evidence Review
+
+I completed an individual self-review of the environment evidence and the agent's final assessment. I checked that S02, S03, and S05 matched the simulated dataset, that the Microsoft reference was used for technical background, and that the final decision followed the risk policy.
+
+I did not find any major inconsistencies in the evidence or the baseline risk decision.
+
+The full review, including the review date and limitations, is documented in [HUMAN_REVIEW.md](HUMAN_REVIEW.md). Since this is an individual project, this was a self-review rather than an independent peer review.
+
+## 6. Limitations and Next Steps
+
+The environment is simulated, and I did not scan FILE04 or perform a real SMB relay attack. I also did not collect live network traffic, authentication logs, or share permissions.
+
+The mock E2E tests are useful for checking the program's logic, but they do not measure the accuracy of the live model. For future work, I would run more live tests and compare the results with additional verified environment evidence.
+
+I kept the baseline inputs, outputs, and traces so they can be used again for Assignment 4.

@@ -1,14 +1,19 @@
 flowchart TD
-    A[Case input: FILE04 and risk question] --> B[LLM agent via Duke AI Gateway]
-    B -->|Model-selected tool call| C[Environment lookup]
-    B -->|Model-selected tool call| D[External reference lookup]
-    C --> E[Simulated asset and S02 S03 S05 evidence]
-    D --> F[Allowlisted Microsoft Learn technical content]
-    E --> G[Tool results with provenance and unknowns]
-    F --> G
+    A[Load FILE04 case and configuration] --> B[LLM agent via Duke AI Gateway]
+    B -->|Select tool and arguments| C{Tool request}
+    C -->|Environment lookup| D[Read simulated environment evidence]
+    C -->|External lookup| E[Fetch allowlisted Microsoft Learn reference]
+    C -->|Invalid request| F[Record tool error]
+    D --> G[Return evidence S02 S03 and context S05]
+    E --> H{Lookup successful?}
+    H -->|Yes| I[Return technical reference and source details]
+    H -->|No| F
     G --> B
-    B --> H[Structured applicability and impact analysis]
-    H --> I[Python validation and deterministic risk policy]
-    I --> J[Assessment JSON and tool trace]
-    J --> K[Human evidence review]
-    K --> L[Follow-up verification and mitigation]
+    I --> B
+    F --> B
+    B --> J[Structured applicability and impact analysis]
+    J --> K[Python validates inputs and checks missing evidence]
+    K --> L[Apply deterministic risk policy]
+    L --> M[Save assessment JSON and tool trace]
+    M --> N[Author self-review of evidence and decision]
+    N --> O[Document unknowns and recommended actions]

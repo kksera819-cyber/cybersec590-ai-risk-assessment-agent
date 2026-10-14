@@ -1,39 +1,74 @@
-# Step 1 — Proposed Architecture
+# Agent Architecture
 
-## Risk question
-Does FILE04's nonmandatory SMB signing create meaningful SMB relay risk given prerequisites, access paths, controls, and business impact?
+## 1. Risk Question
 
-## Scope and sources
-Target FILE04 within W05, Northbridge Services fictional snapshot (2026-09-23). The supplied Word document supports S01, S02, S03 and S05. Our JSON is a **partial reconstruction**, not the missing canonical JSON. Unknown details remain null. External source: Microsoft SMB signing overview (URL in threat_input.json), to be retrieved and reviewed during the completed agent run.
+Does FILE04's SMB signing configuration create a meaningful SMB relay risk in the simulated Northbridge Services environment?
 
-## Planned workflow
+FILE04 is a Windows Server 2022 file server in the W05 group. SMB signing is not required on this server, but the environment does not provide enough information to confirm an SMB relay attack path.
+
+## 2. Architecture Diagram
+
+The workflow diagram is saved in [architecture.mmd](architecture.mmd). It shows how the model requests tools, how Python handles the results, and where the final risk decision is made.
+
 ```mermaid
 flowchart TD
- A[Load threat and environment snapshot] --> B[LLM chooses tool and arguments]
- B --> C{Tool choice valid?}
- C -- No --> F[Log error and retry once or stop for review]
- C -- Yes --> D[Python executes environment or external lookup]
- D --> E{Evidence returned?}
- E -- No --> F
- E -- Yes --> G[LLM compares threat prerequisites with environment evidence]
- G --> H[Validate facts and policy inputs]
- H --> I{Decisive facts known?}
- I -- No --> J[Insufficient Evidence + follow-up action]
- I -- Yes --> K[Deterministic applicability-impact policy]
- J --> L[Save structured assessment and evidence trace]
- K --> L
- L --> M[Analyst reviews citations and decision]
+    A[Load FILE04 case and configuration] --> B[LLM agent via Duke AI Gateway]
+    B -->|Select tool and arguments| C{Tool request}
+    C -->|Environment lookup| D[Read simulated environment evidence]
+    C -->|External lookup| E[Fetch allowlisted Microsoft Learn reference]
+    C -->|Invalid request| F[Record tool error]
+    D --> G[Return evidence S02 S03 and context S05]
+    E --> H{Lookup successful?}
+    H -->|Yes| I[Return technical reference and source details]
+    H -->|No| F
+    G --> B
+    I --> B
+    F --> B
+    B --> J[Structured applicability and impact analysis]
+    J --> K[Python validates inputs and checks missing evidence]
+    K --> L[Apply deterministic risk policy]
+    L --> M[Save assessment JSON and tool trace]
+    M --> N[Author self-review of evidence and decision]
+    N --> O[Document unknowns and recommended actions]
 ```
 
-## Tool contracts
-- `lookup_environment(asset_id: str) -> dict`: returns asset, matching evidence IDs, simulated mode and snapshot date; missing IDs return `not_found`.
-- `lookup_external_reference(url: str) -> dict`: allowlisted Microsoft SMB signing page; returns bounded page excerpt and URL on success, `unavailable` on timeout/network error, `blocked` for disallowed URL. Raw HTML must be parsed/validated before factual use.
+## 3. How the Agent Works
 
-## Rating policy (proposed)
-Applicability is `confirmed`, `potential`, `not_applicable`, or `unknown`; impact is `high`, `medium`, `low`, or `unknown`. A missing decisive fact returns Insufficient Evidence, except confirmed non-applicability -> Low. Confirmed applicability: high/medium impact -> High, low impact -> Medium. Potential applicability: high/medium impact -> Medium, low impact -> Low. Applicability refers to the threat prerequisites, not merely the known SMB signing configuration. Impact reflects business consequence, not CVSS.
+1. The program loads the case from `data/threat_input.json` and connects to the Duke AI Gateway.
+2. The LLM selects tool calls using `tool_choice=auto`.
+3. Python runs `lookup_environment` for simulated asset evidence and `lookup_external_reference` for the Microsoft SMB signing documentation.
+4. Tool results are returned to the model. The model uses them to explain applicability, impact, and missing information.
+5. Python checks the model output and applies the risk policy in `src/risk_policy.py`. The model does not choose the final risk rating by itself.
+6. The program saves the assessment and tool trace. I then review the evidence and the result separately.
 
-## Acceptance test
-A completed run must demonstrate model-selected tool call, code execution, attributed local and external evidence returned to model, policy-consistent assessment, saved configuration and tool trace, and analyst citation review. Current starter is NOT a completed agent run.
+## 4. Evidence and Tools
 
-## Implementation gap
-Current code provides a deterministic baseline, tool prototypes and policy tests. Still required: LLM orchestration, verified external source parsing, complete run trace, analyst review, and comparison with group consensus.
+| Tool | Purpose | If It Fails |
+|---|---|---|
+| `lookup_environment(asset_id)` | Find FILE04 and its simulated evidence | Return a missing-asset result instead of guessing |
+| `lookup_external_reference(url)` | Retrieve the approved Microsoft Learn reference | Record the failure and avoid a confident rating |
+
+The environment data is reconstructed from the course document dated September 23, 2026. S02 describes network restrictions, S03 describes the SMB signing setting, and S05 gives general business impact context. The Microsoft reference explains SMB signing but does not prove that FILE04 is exploitable.
+
+## 5. Risk Decision
+
+The model returns separate values for applicability and impact. Python validates those values and applies the project policy.
+
+The saved live baseline produced:
+
+- **Applicability:** `potential`
+- **Impact:** `unknown`
+- **Decision:** `Insufficient Evidence`
+- **Rule:** `P1`
+
+This result makes sense because internal SMB reachability, NTLM relay prerequisites, effective SMB signing, and FILE04-specific business impact are still unknown.
+
+## 6. Testing and Review
+
+The project has a saved live Duke Gateway baseline, 11 passing unit tests, and six passing mocked end-to-end scenarios. The mocked tests check the workflow under controlled conditions; they are not six additional live model runs.
+
+I completed an individual evidence self-review. The details are in [HUMAN_REVIEW.md](HUMAN_REVIEW.md), and the test results are in [TESTING.md](TESTING.md).
+
+## 7. Limitations
+
+This is a simulated environment, not a live network assessment. No exploitation or penetration testing was performed. The result should be updated if new information becomes available about FILE04's network access, authentication settings, or shared files.
